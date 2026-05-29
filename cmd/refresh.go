@@ -39,16 +39,21 @@ func runRefresh(_ *cobra.Command, _ []string) error {
 	if err != nil {
 		return err
 	}
-	if cfg.MFASerial != "" && creds.TOTP == "" {
-		return fmt.Errorf("role %q requires MFA but the 1Password item %q has no one-time-password field — add the MFA TOTP to that item",
-			cfg.RoleARN, cfg.Item)
+
+	// MFA: use the TOTP from 1Password if present, otherwise prompt for the code.
+	tokenCode := creds.TOTP
+	if cfg.MFASerial != "" && tokenCode == "" {
+		tokenCode = prompt(fmt.Sprintf("MFA code for %s", cfg.MFASerial), "")
+		if tokenCode == "" {
+			return fmt.Errorf("an MFA code is required to assume %s", cfg.RoleARN)
+		}
 	}
 
 	// Step 2: assume the role (with MFA) to get temp creds that hold
 	// CreateInference. These are used only to sign the token — never written to disk.
 	fmt.Printf("Assuming role %s (region: %s)…\n", cfg.RoleARN, region)
 	shortTermCreds, err := awscreds.AssumeRole(ctx, creds.AccessKeyID, creds.SecretAccessKey,
-		cfg.RoleARN, cfg.MFASerial, creds.TOTP, region, cfg.SessionDuration)
+		cfg.RoleARN, cfg.MFASerial, tokenCode, region, cfg.SessionDuration)
 	if err != nil {
 		return err
 	}
