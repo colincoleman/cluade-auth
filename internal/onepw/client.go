@@ -51,7 +51,7 @@ func (c *Client) GetCredentials(ctx context.Context, vaultName, itemTitle string
 }
 
 func (c *Client) StoreCredentials(ctx context.Context, vaultName, itemTitle, accessKeyID, secretAccessKey string) error {
-	vaultID, err := c.findVaultID(ctx, vaultName)
+	vaultID, err := c.findOrCreateVaultID(ctx, vaultName)
 	if err != nil {
 		return err
 	}
@@ -96,16 +96,43 @@ func (c *Client) StoreCredentials(ctx context.Context, vaultName, itemTitle, acc
 }
 
 func (c *Client) findVaultID(ctx context.Context, name string) (string, error) {
+	id, found, err := c.lookupVault(ctx, name)
+	if err != nil {
+		return "", err
+	}
+	if !found {
+		return "", fmt.Errorf("vault %q not found — run 'claude-auth store' to create it", name)
+	}
+	return id, nil
+}
+
+func (c *Client) findOrCreateVaultID(ctx context.Context, name string) (string, error) {
+	id, found, err := c.lookupVault(ctx, name)
+	if err != nil {
+		return "", err
+	}
+	if found {
+		return id, nil
+	}
+	vault, err := c.op.Vaults().Create(ctx, onepassword.VaultCreateParams{Title: name})
+	if err != nil {
+		return "", fmt.Errorf("failed to create vault %q: %w", name, err)
+	}
+	fmt.Printf("Created vault %q\n", name)
+	return vault.ID, nil
+}
+
+func (c *Client) lookupVault(ctx context.Context, name string) (id string, found bool, err error) {
 	vaults, err := c.op.Vaults().List(ctx)
 	if err != nil {
-		return "", fmt.Errorf("failed to list vaults: %w", err)
+		return "", false, fmt.Errorf("failed to list vaults: %w", err)
 	}
 	for _, v := range vaults {
 		if v.Title == name {
-			return v.ID, nil
+			return v.ID, true, nil
 		}
 	}
-	return "", fmt.Errorf("vault %q not found", name)
+	return "", false, nil
 }
 
 func (c *Client) findItem(ctx context.Context, vaultID, title string) (*onepassword.Item, error) {
