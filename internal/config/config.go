@@ -39,7 +39,7 @@ func DefaultConfig() Config {
 	return Config{
 		Vault:           "Developer",
 		Item:            "AWS IAM - Claude",
-		RoleARN:         "arn:aws:iam::917709839926:role/rootRole",
+		RoleARN:         "arn:aws:iam::917709839926:role/claude-platform",
 		MFASerial:       "arn:aws:iam::917709839926:mfa/colin.coleman.localadmin",
 		WorkspaceRegion: "eu-west-1",
 		SessionDuration: 12,
