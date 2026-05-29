@@ -7,9 +7,10 @@ import (
 )
 
 var rootCmd = &cobra.Command{
-	Use:   "claude-auth",
-	Short: "Manage AWS and Claude Platform credentials",
-	Long:  "claude-auth stores long-term AWS IAM credentials in 1Password and refreshes short-term credentials for use with Claude Platform on AWS.",
+	Use:          "claude-auth",
+	Short:        "Manage AWS and Claude Platform credentials",
+	Long:         "claude-auth stores long-term AWS IAM credentials in 1Password and refreshes short-term credentials for use with Claude Platform on AWS.",
+	SilenceUsage: true,
 }
 
 func Execute() {
