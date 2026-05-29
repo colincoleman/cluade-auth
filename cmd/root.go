@@ -25,5 +25,6 @@ func init() {
 	rootCmd.AddCommand(refreshCmd)
 	rootCmd.AddCommand(statusCmd)
 	rootCmd.AddCommand(execCmd)
+	rootCmd.AddCommand(awsExecCmd)
 	rootCmd.AddCommand(checkCmd)
 }
