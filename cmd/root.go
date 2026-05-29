@@ -24,4 +24,5 @@ func init() {
 	rootCmd.AddCommand(storeCmd)
 	rootCmd.AddCommand(refreshCmd)
 	rootCmd.AddCommand(statusCmd)
+	rootCmd.AddCommand(execCmd)
 }
