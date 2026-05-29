@@ -76,7 +76,7 @@ func runRefresh(_ *cobra.Command, _ []string) error {
 		if err := os.MkdirAll(filepath.Dir(envPath), 0700); err != nil {
 			return err
 		}
-		content := fmt.Sprintf("export ANTHROPIC_AWS_API_KEY=%s\n", anthropicToken)
+		content := fmt.Sprintf("ANTHROPIC_AWS_API_KEY=%s\n", anthropicToken)
 		if err := os.WriteFile(envPath, []byte(content), 0600); err != nil {
 			return fmt.Errorf("failed to write anthropic.env: %w", err)
 		}

@@ -53,7 +53,7 @@ func runSetup(_ *cobra.Command, _ []string) error {
 	fmt.Println("  2. Run: claude-auth store")
 	fmt.Println("  3. Run: claude-auth refresh")
 	fmt.Println("\nAdd to ~/.zshrc:")
-	fmt.Println("  [ -f ~/.config/claude-auth/anthropic.env ] && source ~/.config/claude-auth/anthropic.env")
+	fmt.Println("  [ -f ~/.config/claude-auth/anthropic.env ] && source ~/.config/claude-auth/anthropic.env && export ANTHROPIC_AWS_API_KEY")
 	fmt.Printf("  export ANTHROPIC_AWS_WORKSPACE_ID=%s\n", cfg.WorkspaceID)
 	fmt.Println("  function claude() { AWS_PROFILE=" + cfg.AWSProfile + " command claude \"$@\"; }")
 
