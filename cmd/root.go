@@ -27,4 +27,5 @@ func init() {
 	rootCmd.AddCommand(execCmd)
 	rootCmd.AddCommand(awsExecCmd)
 	rootCmd.AddCommand(checkCmd)
+	rootCmd.AddCommand(clearCmd)
 }

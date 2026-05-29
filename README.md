@@ -148,6 +148,16 @@ Optional convenience alias in `~/.zshrc` (nothing else is needed there):
 alias claude-aws='claude-auth exec -- claude'
 ```
 
+### Switching back to your personal account
+
+Nothing to do — the AWS token is only ever injected by `claude-auth exec`, so just run
+`claude` directly to use your personal account. To explicitly wipe the stored token
+(hygiene, or to force a fresh `refresh`):
+
+```bash
+claude-auth clear
+```
+
 ### aws-exec
 
 Run any command with **short-term AWS credentials** from the assumed role exported as
@@ -171,6 +181,7 @@ claude-auth aws-exec -- aws iam update-role --role-name claude-platform --max-se
 | `check` | Decode the token locally; verify region matches + not expired |
 | `exec -- <cmd>` | Run `<cmd>` with the Anthropic token + workspace vars injected |
 | `aws-exec -- <cmd>` | Run `<cmd>` with short-term AWS creds from the assumed role |
+| `clear` | Delete the stored token (plain `claude` then uses your personal account) |
 
 ---
 
