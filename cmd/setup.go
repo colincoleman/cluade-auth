@@ -53,9 +53,15 @@ func runSetup(_ *cobra.Command, _ []string) error {
 	fmt.Println("  2. Run: claude-auth store")
 	fmt.Println("  3. Run: claude-auth refresh")
 	fmt.Println("\nAdd to ~/.zshrc:")
-	fmt.Println("  [ -f ~/.config/claude-auth/anthropic.env ] && source ~/.config/claude-auth/anthropic.env && export ANTHROPIC_AWS_API_KEY")
+	fmt.Println("  # Claude Platform on AWS")
+	fmt.Println("  export CLAUDE_CODE_USE_ANTHROPIC_AWS=1")
 	fmt.Printf("  export ANTHROPIC_AWS_WORKSPACE_ID=%s\n", cfg.WorkspaceID)
-	fmt.Println("  function claude() { AWS_PROFILE=" + cfg.AWSProfile + " command claude \"$@\"; }")
+	fmt.Println("  [ -f ~/.config/claude-auth/anthropic.env ] && source ~/.config/claude-auth/anthropic.env && export ANTHROPIC_AWS_API_KEY")
+	fmt.Println("  function claude() { AWS_PROFILE=" + cfg.AWSProfile + " AWS_REGION=" + cfg.AWSRegion + " command claude \"$@\"; }")
+	fmt.Println()
+	fmt.Println("  # Optional: auto-refresh credentials when they expire mid-session")
+	fmt.Println("  # Add to ~/.claude/settings.json:")
+	fmt.Println("  #   { \"awsAuthRefresh\": \"claude-auth refresh\" }")
 
 	return nil
 }
