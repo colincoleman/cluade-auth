@@ -21,8 +21,20 @@ type Config struct {
 	AWSProfile         string `json:"aws_profile"`
 	AWSRegion          string `json:"aws_region"`
 	AWSRegionFallback  string `json:"aws_region_fallback"`
-	WorkspaceID        string `json:"workspace_id"`
-	SessionDuration    int    `json:"session_duration_hours"`
+	// WorkspaceRegion is the region where the Claude Platform workspace was
+	// provisioned. It must match the API endpoint and the token signing region.
+	// Leave empty to fall back to AWSRegion.
+	WorkspaceRegion string `json:"workspace_region,omitempty"`
+	WorkspaceID     string `json:"workspace_id"`
+	SessionDuration int    `json:"session_duration_hours"`
+}
+
+// EffectiveWorkspaceRegion returns WorkspaceRegion if set, otherwise AWSRegion.
+func (c *Config) EffectiveWorkspaceRegion() string {
+	if c.WorkspaceRegion != "" {
+		return c.WorkspaceRegion
+	}
+	return c.AWSRegion
 }
 
 type State struct {

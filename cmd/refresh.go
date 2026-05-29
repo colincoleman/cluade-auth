@@ -63,7 +63,7 @@ func runRefresh(_ *cobra.Command, _ []string) error {
 		return err
 	}
 	duration := time.Duration(cfg.SessionDuration) * time.Hour
-	anthropicToken, err := tokengen.Generate(ctx, awsCreds, cfg.AWSRegion, duration)
+	anthropicToken, err := tokengen.Generate(ctx, awsCreds, cfg.EffectiveWorkspaceRegion(), duration)
 	if err != nil {
 		// Non-fatal: AWS creds still work via SigV4
 		fmt.Printf("Warning: Anthropic token generation failed: %v\n", err)

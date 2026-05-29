@@ -41,6 +41,7 @@ func runSetup(_ *cobra.Command, _ []string) error {
 	if cfg.WorkspaceID == "" {
 		return fmt.Errorf("workspace ID is required")
 	}
+	cfg.WorkspaceRegion = prompt("Workspace region (region where the workspace was provisioned)", cfg.AWSRegionFallback)
 
 	if err := config.Save(&cfg); err != nil {
 		return fmt.Errorf("failed to save config: %w", err)
