@@ -10,7 +10,6 @@ require (
 	github.com/aws/aws-sdk-go-v2/service/sts v1.42.2
 	github.com/spf13/cobra v1.10.2
 	golang.org/x/term v0.43.0
-	gopkg.in/ini.v1 v1.67.2
 )
 
 require (
