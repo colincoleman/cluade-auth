@@ -27,6 +27,35 @@ func fakeCredentials() aws.Credentials {
 	}
 }
 
+func TestDecodeRoundTrip(t *testing.T) {
+	token, err := tokengen.Generate(context.Background(), fakeCredentials(), "eu-west-1", 6*time.Hour)
+	if err != nil {
+		t.Fatalf("Generate: %v", err)
+	}
+
+	info, err := tokengen.Decode(token)
+	if err != nil {
+		t.Fatalf("Decode: %v", err)
+	}
+	if info.Region != "eu-west-1" {
+		t.Errorf("Region: got %q, want eu-west-1", info.Region)
+	}
+	if info.Expiry.IsZero() {
+		t.Fatal("Expiry should not be zero")
+	}
+	// Expiry should be ~6h from now (allow generous skew)
+	remaining := time.Until(info.Expiry)
+	if remaining < 5*time.Hour || remaining > 7*time.Hour {
+		t.Errorf("Expiry ~6h expected, got %v remaining", remaining)
+	}
+}
+
+func TestDecodeRejectsNonToken(t *testing.T) {
+	if _, err := tokengen.Decode("sk-ant-not-a-valid-token"); err == nil {
+		t.Error("Decode should reject a string without the token prefix")
+	}
+}
+
 func TestGeneratePrefix(t *testing.T) {
 	token, err := tokengen.Generate(context.Background(), fakeCredentials(), "eu-north-1", time.Hour)
 	if err != nil {

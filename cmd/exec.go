@@ -41,16 +41,19 @@ func runExec(_ *cobra.Command, args []string) error {
 		return err
 	}
 
-	// Build the injected env vars (appended last so they override anything already set)
-	inject := []string{
-		"CLAUDE_CODE_USE_ANTHROPIC_AWS=1",
-		"AWS_PROFILE=" + cfg.AWSProfile,
-		"AWS_REGION=" + cfg.EffectiveWorkspaceRegion(),
-		"ANTHROPIC_AWS_WORKSPACE_ID=" + cfg.WorkspaceID,
+	apiKey := readAnthropicAPIKey()
+	if apiKey == "" {
+		return fmt.Errorf("no Anthropic API key found — run 'claude-auth refresh' first")
 	}
 
-	if apiKey := readAnthropicAPIKey(); apiKey != "" {
-		inject = append(inject, "ANTHROPIC_AWS_API_KEY="+apiKey)
+	// The short-term ANTHROPIC_AWS_API_KEY token is self-contained: Claude Code
+	// sends it as a bearer token and AWS credentials are not consulted at all.
+	// We deliberately do NOT set AWS_PROFILE or AWS_* credentials here.
+	inject := []string{
+		"CLAUDE_CODE_USE_ANTHROPIC_AWS=1",
+		"AWS_REGION=" + cfg.EffectiveWorkspaceRegion(),
+		"ANTHROPIC_AWS_WORKSPACE_ID=" + cfg.WorkspaceID,
+		"ANTHROPIC_AWS_API_KEY=" + apiKey,
 	}
 
 	env := append(os.Environ(), inject...)
@@ -75,7 +78,7 @@ func readAnthropicAPIKey() string {
 	}
 	f, err := os.Open(envPath)
 	if err != nil {
-		return "" // file doesn't exist yet — fine, SigV4 will be used
+		return "" // file doesn't exist yet — caller reports the error
 	}
 	defer f.Close()
 

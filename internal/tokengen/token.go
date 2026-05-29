@@ -5,6 +5,9 @@ import (
 	"encoding/base64"
 	"fmt"
 	"net/http"
+	"net/url"
+	"strconv"
+	"strings"
 	"time"
 
 	"github.com/aws/aws-sdk-go-v2/aws"
@@ -51,4 +54,56 @@ func Generate(ctx context.Context, creds aws.Credentials, region string, expiry 
 	encoded := base64.StdEncoding.EncodeToString([]byte(payload))
 
 	return tokenPrefix + encoded, nil
+}
+
+// TokenInfo holds the metadata decoded from a token's embedded presigned URL.
+type TokenInfo struct {
+	Region string    // region the token is signed for
+	Expiry time.Time // when the token stops being valid
+}
+
+// Decode parses a token (without making any network call) and extracts the
+// region it is scoped to and its expiry, from the embedded SigV4 query params.
+// This lets `claude-auth check` catch region mismatches and expiry locally.
+func Decode(token string) (*TokenInfo, error) {
+	if !strings.HasPrefix(token, tokenPrefix) {
+		return nil, fmt.Errorf("not a valid Anthropic AWS API key (missing prefix)")
+	}
+	encoded := strings.TrimPrefix(token, tokenPrefix)
+	decoded, err := base64.StdEncoding.DecodeString(encoded)
+	if err != nil {
+		return nil, fmt.Errorf("token payload is not valid base64: %w", err)
+	}
+
+	payload := strings.TrimSuffix(string(decoded), tokenVersion)
+	// payload is "host/?query" — parse the query string
+	q := payload
+	if i := strings.Index(payload, "?"); i >= 0 {
+		q = payload[i+1:]
+	}
+	values, err := url.ParseQuery(q)
+	if err != nil {
+		return nil, fmt.Errorf("could not parse token query: %w", err)
+	}
+
+	info := &TokenInfo{}
+
+	// X-Amz-Credential = <access-key>/<date>/<region>/<service>/aws4_request
+	if cred := values.Get("X-Amz-Credential"); cred != "" {
+		parts := strings.Split(cred, "/")
+		if len(parts) >= 3 {
+			info.Region = parts[2]
+		}
+	}
+
+	// Expiry = X-Amz-Date + X-Amz-Expires
+	if date := values.Get("X-Amz-Date"); date != "" {
+		signed, err := time.Parse("20060102T150405Z", date)
+		if err == nil {
+			secs, _ := strconv.Atoi(values.Get("X-Amz-Expires"))
+			info.Expiry = signed.Add(time.Duration(secs) * time.Second)
+		}
+	}
+
+	return info, nil
 }

@@ -21,6 +21,19 @@ func TestDefaultConfig(t *testing.T) {
 	}
 }
 
+func TestEffectiveWorkspaceRegion(t *testing.T) {
+	// Explicit workspace region wins
+	c := &config.Config{AWSRegion: "eu-north-1", WorkspaceRegion: "eu-west-1"}
+	if got := c.EffectiveWorkspaceRegion(); got != "eu-west-1" {
+		t.Errorf("got %q, want eu-west-1", got)
+	}
+	// Falls back to AWSRegion when empty
+	c = &config.Config{AWSRegion: "eu-north-1"}
+	if got := c.EffectiveWorkspaceRegion(); got != "eu-north-1" {
+		t.Errorf("got %q, want eu-north-1 (fallback)", got)
+	}
+}
+
 func TestSaveAndLoad(t *testing.T) {
 	t.Setenv("HOME", t.TempDir())
 
@@ -91,7 +104,6 @@ func TestSaveAndLoadState(t *testing.T) {
 
 	expiry := time.Now().Add(12 * time.Hour).UTC().Truncate(time.Second)
 	want := &config.State{
-		AWSExpiry:            expiry.Format(time.RFC3339),
 		AnthropicTokenExpiry: expiry.Format(time.RFC3339),
 	}
 
@@ -103,8 +115,8 @@ func TestSaveAndLoadState(t *testing.T) {
 	if err != nil {
 		t.Fatalf("LoadState: %v", err)
 	}
-	if got.AWSExpiry != want.AWSExpiry {
-		t.Errorf("AWSExpiry: got %q, want %q", got.AWSExpiry, want.AWSExpiry)
+	if got.AnthropicTokenExpiry != want.AnthropicTokenExpiry {
+		t.Errorf("AnthropicTokenExpiry: got %q, want %q", got.AnthropicTokenExpiry, want.AnthropicTokenExpiry)
 	}
 }
 

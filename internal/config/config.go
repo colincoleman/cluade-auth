@@ -38,7 +38,6 @@ func (c *Config) EffectiveWorkspaceRegion() string {
 }
 
 type State struct {
-	AWSExpiry           string `json:"aws_expiry"`
 	AnthropicTokenExpiry string `json:"anthropic_token_expiry"`
 }
 

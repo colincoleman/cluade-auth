@@ -25,9 +25,8 @@ func runStatus(_ *cobra.Command, _ []string) error {
 		return fmt.Errorf("failed to load state: %w", err)
 	}
 
-	fmt.Printf("Profile: [%s]\n\n", cfg.AWSProfile)
+	fmt.Printf("Workspace region: %s\n\n", cfg.EffectiveWorkspaceRegion())
 
-	printExpiry("AWS credentials", state.AWSExpiry)
 	printExpiry("Anthropic token", state.AnthropicTokenExpiry)
 
 	return nil
