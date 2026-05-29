@@ -24,7 +24,8 @@ func runStore(_ *cobra.Command, _ []string) error {
 		return err
 	}
 
-	fmt.Printf("Storing credentials in 1Password vault %q, item %q\n\n", cfg.Vault, cfg.Item)
+	fmt.Printf("Storing credentials in 1Password vault %q, item %q\n", cfg.Vault, cfg.Item)
+	fmt.Println()
 
 	accessKeyID := prompt("AWS Access Key ID", "")
 	if accessKeyID == "" {
@@ -55,14 +56,14 @@ func promptSecret(label string) (string, error) {
 		}
 		return strings.TrimSpace(string(b)), nil
 	}
-	// fallback for non-interactive
 	val := prompt(label, "")
 	return val, nil
 }
 
 func loadConfigOrSetup() (*config.Config, error) {
 	if !config.Exists() {
-		fmt.Println("No config found. Running setup first...\n")
+		fmt.Println("No config found. Running setup first...")
+		fmt.Println()
 		if err := runSetup(nil, nil); err != nil {
 			return nil, err
 		}
