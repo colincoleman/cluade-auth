@@ -27,7 +27,7 @@ func runCheck(_ *cobra.Command, _ []string) error {
 	}
 	path, _ := config.Path()
 	fmt.Printf("✓ Config         %s\n", path)
-	fmt.Printf("  Workspace:     %s  (region %s)\n", cfg.WorkspaceID, cfg.EffectiveWorkspaceRegion())
+	fmt.Printf("  Workspace:     %s  (region %s)\n", cfg.WorkspaceID, cfg.WorkspaceRegion)
 
 	// 2. Token present
 	apiKey := readAnthropicAPIKey()
@@ -46,7 +46,7 @@ func runCheck(_ *cobra.Command, _ []string) error {
 	}
 
 	// Region match
-	want := cfg.EffectiveWorkspaceRegion()
+	want := cfg.WorkspaceRegion
 	if info.Region == want {
 		fmt.Printf("✓ Token region   %s (matches workspace)\n", info.Region)
 	} else {

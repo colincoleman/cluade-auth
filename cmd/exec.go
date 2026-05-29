@@ -51,7 +51,7 @@ func runExec(_ *cobra.Command, args []string) error {
 	// We deliberately do NOT set AWS_PROFILE or AWS_* credentials here.
 	inject := []string{
 		"CLAUDE_CODE_USE_ANTHROPIC_AWS=1",
-		"AWS_REGION=" + cfg.EffectiveWorkspaceRegion(),
+		"AWS_REGION=" + cfg.WorkspaceRegion,
 		"ANTHROPIC_AWS_WORKSPACE_ID=" + cfg.WorkspaceID,
 		"ANTHROPIC_AWS_API_KEY=" + apiKey,
 	}

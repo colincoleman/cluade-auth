@@ -25,7 +25,7 @@ func runStatus(_ *cobra.Command, _ []string) error {
 		return fmt.Errorf("failed to load state: %w", err)
 	}
 
-	fmt.Printf("Workspace region: %s\n\n", cfg.EffectiveWorkspaceRegion())
+	fmt.Printf("Workspace region: %s\n\n", cfg.WorkspaceRegion)
 
 	printExpiry("Anthropic token", state.AnthropicTokenExpiry)
 

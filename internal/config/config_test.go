@@ -13,24 +13,18 @@ func TestDefaultConfig(t *testing.T) {
 	if cfg.Vault == "" {
 		t.Error("default vault should not be empty")
 	}
-	if cfg.AWSProfile == "" {
-		t.Error("default AWS profile should not be empty")
-	}
 	if cfg.SessionDuration <= 0 {
 		t.Error("default session duration should be positive")
 	}
 }
 
-func TestEffectiveWorkspaceRegion(t *testing.T) {
-	// Explicit workspace region wins
-	c := &config.Config{AWSRegion: "eu-north-1", WorkspaceRegion: "eu-west-1"}
-	if got := c.EffectiveWorkspaceRegion(); got != "eu-west-1" {
-		t.Errorf("got %q, want eu-west-1", got)
+func TestDefaultConfigHasRoleAndRegion(t *testing.T) {
+	cfg := config.DefaultConfig()
+	if cfg.RoleARN == "" {
+		t.Error("default RoleARN should not be empty")
 	}
-	// Falls back to AWSRegion when empty
-	c = &config.Config{AWSRegion: "eu-north-1"}
-	if got := c.EffectiveWorkspaceRegion(); got != "eu-north-1" {
-		t.Errorf("got %q, want eu-north-1 (fallback)", got)
+	if cfg.WorkspaceRegion == "" {
+		t.Error("default WorkspaceRegion should not be empty")
 	}
 }
 
@@ -41,9 +35,9 @@ func TestSaveAndLoad(t *testing.T) {
 		OnePasswordAccount: "test@example.com",
 		Vault:              "My Vault",
 		Item:               "AWS Creds",
-		AWSProfile:         "test-profile",
-		AWSRegion:          "eu-north-1",
-		AWSRegionFallback:  "eu-west-1",
+		RoleARN:            "arn:aws:iam::123:role/test",
+		MFASerial:          "arn:aws:iam::123:mfa/test",
+		WorkspaceRegion:    "eu-west-1",
 		WorkspaceID:        "ws-abc123",
 		SessionDuration:    12,
 	}
@@ -60,11 +54,11 @@ func TestSaveAndLoad(t *testing.T) {
 	if got.OnePasswordAccount != want.OnePasswordAccount {
 		t.Errorf("OnePasswordAccount: got %q, want %q", got.OnePasswordAccount, want.OnePasswordAccount)
 	}
-	if got.Vault != want.Vault {
-		t.Errorf("Vault: got %q, want %q", got.Vault, want.Vault)
+	if got.RoleARN != want.RoleARN {
+		t.Errorf("RoleARN: got %q, want %q", got.RoleARN, want.RoleARN)
 	}
-	if got.AWSRegion != want.AWSRegion {
-		t.Errorf("AWSRegion: got %q, want %q", got.AWSRegion, want.AWSRegion)
+	if got.WorkspaceRegion != want.WorkspaceRegion {
+		t.Errorf("WorkspaceRegion: got %q, want %q", got.WorkspaceRegion, want.WorkspaceRegion)
 	}
 	if got.WorkspaceID != want.WorkspaceID {
 		t.Errorf("WorkspaceID: got %q, want %q", got.WorkspaceID, want.WorkspaceID)

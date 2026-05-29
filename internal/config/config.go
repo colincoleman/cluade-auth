@@ -18,23 +18,17 @@ type Config struct {
 	OnePasswordAccount string `json:"onepassword_account"`
 	Vault              string `json:"vault"`
 	Item               string `json:"item"`
-	AWSProfile         string `json:"aws_profile"`
-	AWSRegion          string `json:"aws_region"`
-	AWSRegionFallback  string `json:"aws_region_fallback"`
+	// RoleARN is the IAM role to assume. It must hold the
+	// aws-external-anthropic:CreateInference permission.
+	RoleARN string `json:"role_arn"`
+	// MFASerial is the ARN of the MFA device required to assume RoleARN.
+	// Leave empty if the role does not require MFA.
+	MFASerial string `json:"mfa_serial,omitempty"`
 	// WorkspaceRegion is the region where the Claude Platform workspace was
-	// provisioned. It must match the API endpoint and the token signing region.
-	// Leave empty to fall back to AWSRegion.
-	WorkspaceRegion string `json:"workspace_region,omitempty"`
+	// provisioned. Claude Code uses it to build the API endpoint.
+	WorkspaceRegion string `json:"workspace_region"`
 	WorkspaceID     string `json:"workspace_id"`
 	SessionDuration int    `json:"session_duration_hours"`
-}
-
-// EffectiveWorkspaceRegion returns WorkspaceRegion if set, otherwise AWSRegion.
-func (c *Config) EffectiveWorkspaceRegion() string {
-	if c.WorkspaceRegion != "" {
-		return c.WorkspaceRegion
-	}
-	return c.AWSRegion
 }
 
 type State struct {
@@ -43,12 +37,12 @@ type State struct {
 
 func DefaultConfig() Config {
 	return Config{
-		Vault:             "Developer",
-		Item:              "AWS IAM - Claude",
-		AWSProfile:        "claude",
-		AWSRegion:         "eu-north-1",
-		AWSRegionFallback: "eu-west-1",
-		SessionDuration:   12,
+		Vault:           "Developer",
+		Item:            "AWS IAM - Claude",
+		RoleARN:         "arn:aws:iam::917709839926:role/rootRole",
+		MFASerial:       "arn:aws:iam::917709839926:mfa/colin.coleman.localadmin",
+		WorkspaceRegion: "eu-west-1",
+		SessionDuration: 12,
 	}
 }
 

@@ -27,27 +27,46 @@ func New(ctx context.Context, accountName string) (*Client, error) {
 	return &Client{op: op}, nil
 }
 
-func (c *Client) GetCredentials(ctx context.Context, vaultName, itemTitle string) (accessKeyID, secretAccessKey string, err error) {
+// Credentials holds everything claude-auth needs from the 1Password item to
+// assume the role: the long-term IAM keys and the current MFA TOTP code.
+type Credentials struct {
+	AccessKeyID     string
+	SecretAccessKey string
+	TOTP            string // current MFA code, empty if the item has no TOTP field
+}
+
+// GetCredentials fetches the item once and returns the IAM keys plus the
+// current TOTP code (if a one-time-password field is present).
+func (c *Client) GetCredentials(ctx context.Context, vaultName, itemTitle string) (*Credentials, error) {
 	vaultID, err := c.findVaultID(ctx, vaultName)
 	if err != nil {
-		return "", "", err
+		return nil, err
 	}
 	item, err := c.findItem(ctx, vaultID, itemTitle)
 	if err != nil {
-		return "", "", err
+		return nil, err
 	}
+
+	creds := &Credentials{}
 	for _, f := range item.Fields {
 		switch f.Title {
 		case fieldAccessKeyID:
-			accessKeyID = f.Value
+			creds.AccessKeyID = f.Value
 		case fieldSecretAccessKey:
-			secretAccessKey = f.Value
+			creds.SecretAccessKey = f.Value
+		}
+		if f.FieldType == onepassword.ItemFieldTypeTOTP && f.Details != nil {
+			if otp := f.Details.OTP(); otp != nil && otp.Code != nil {
+				creds.TOTP = *otp.Code
+			}
 		}
 	}
-	if accessKeyID == "" || secretAccessKey == "" {
-		return "", "", fmt.Errorf("item %q in vault %q is missing required fields", itemTitle, vaultName)
+
+	if creds.AccessKeyID == "" || creds.SecretAccessKey == "" {
+		return nil, fmt.Errorf("item %q in vault %q is missing %q / %q fields",
+			itemTitle, vaultName, fieldAccessKeyID, fieldSecretAccessKey)
 	}
-	return accessKeyID, secretAccessKey, nil
+	return creds, nil
 }
 
 func (c *Client) StoreCredentials(ctx context.Context, vaultName, itemTitle, accessKeyID, secretAccessKey string) error {

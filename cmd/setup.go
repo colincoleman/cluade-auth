@@ -34,14 +34,16 @@ func runSetup(_ *cobra.Command, _ []string) error {
 
 	cfg.Vault = prompt("1Password vault", cfg.Vault)
 	cfg.Item = prompt("1Password item name", cfg.Item)
-	cfg.AWSProfile = prompt("AWS credentials profile", cfg.AWSProfile)
-	cfg.AWSRegion = prompt("Preferred AWS region", cfg.AWSRegion)
-	cfg.AWSRegionFallback = prompt("Fallback AWS region", cfg.AWSRegionFallback)
+	cfg.RoleARN = prompt("IAM role ARN to assume (must have aws-external-anthropic:CreateInference)", cfg.RoleARN)
+	if cfg.RoleARN == "" {
+		return fmt.Errorf("role ARN is required")
+	}
+	cfg.MFASerial = prompt("MFA device ARN (blank if the role needs no MFA)", cfg.MFASerial)
+	cfg.WorkspaceRegion = prompt("Workspace region (where the Claude workspace was provisioned)", cfg.WorkspaceRegion)
 	cfg.WorkspaceID = prompt("Anthropic workspace ID (Claude Platform on AWS → Workspaces)", "")
 	if cfg.WorkspaceID == "" {
 		return fmt.Errorf("workspace ID is required")
 	}
-	cfg.WorkspaceRegion = prompt("Workspace region (region where the workspace was provisioned)", cfg.AWSRegionFallback)
 
 	if err := config.Save(&cfg); err != nil {
 		return fmt.Errorf("failed to save config: %w", err)
@@ -51,8 +53,14 @@ func runSetup(_ *cobra.Command, _ []string) error {
 	fmt.Printf("\nConfig saved to %s\n", path)
 	fmt.Println("\nNext steps:")
 	fmt.Println("  1. In 1Password: Settings → Developer → enable \"Integrate with other apps\"")
-	fmt.Println("  2. Run: claude-auth store")
-	fmt.Println("  3. Run: claude-auth refresh")
+	fmt.Println("  2. Run: claude-auth store   (stores the IAM access key + secret)")
+	if cfg.MFASerial != "" {
+		fmt.Println("  3. In 1Password: add a one-time-password (TOTP) field to the item")
+		fmt.Println("     for the MFA device — claude-auth reads the live code from it.")
+		fmt.Println("  4. Run: claude-auth refresh")
+	} else {
+		fmt.Println("  3. Run: claude-auth refresh")
+	}
 	fmt.Println("\nUsage:")
 	fmt.Println("  claude-auth exec -- claude          # run Claude Code in AWS Platform mode")
 	fmt.Println("  claude-auth exec -- $SHELL          # open a full AWS Platform shell session")

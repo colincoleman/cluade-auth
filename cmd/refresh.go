@@ -27,26 +27,30 @@ func runRefresh(_ *cobra.Command, _ []string) error {
 	}
 
 	ctx := context.Background()
+	region := cfg.WorkspaceRegion
 
-	// Step 1: fetch long-term IAM credentials from 1Password
+	// Step 1: fetch long-term IAM credentials + MFA TOTP from 1Password (one prompt)
 	fmt.Println("Fetching credentials from 1Password…")
 	opClient, err := onepw.New(ctx, cfg.OnePasswordAccount)
 	if err != nil {
 		return err
 	}
-	accessKeyID, secretAccessKey, err := opClient.GetCredentials(ctx, cfg.Vault, cfg.Item)
+	creds, err := opClient.GetCredentials(ctx, cfg.Vault, cfg.Item)
 	if err != nil {
 		return err
 	}
+	if cfg.MFASerial != "" && creds.TOTP == "" {
+		return fmt.Errorf("role %q requires MFA but the 1Password item %q has no one-time-password field — add the MFA TOTP to that item",
+			cfg.RoleARN, cfg.Item)
+	}
 
-	// Step 2: exchange for short-term STS session credentials. These are used
-	// only to sign the presigned API-key token below — they are never written
-	// to disk. The token signing region must be the workspace region.
-	region := cfg.EffectiveWorkspaceRegion()
-	fmt.Printf("Requesting STS session token (region: %s)…\n", region)
-	shortTermCreds, err := awscreds.GetSessionToken(ctx, accessKeyID, secretAccessKey, region, cfg.SessionDuration)
+	// Step 2: assume the role (with MFA) to get temp creds that hold
+	// CreateInference. These are used only to sign the token — never written to disk.
+	fmt.Printf("Assuming role %s (region: %s)…\n", cfg.RoleARN, region)
+	shortTermCreds, err := awscreds.AssumeRole(ctx, creds.AccessKeyID, creds.SecretAccessKey,
+		cfg.RoleARN, cfg.MFASerial, creds.TOTP, region, cfg.SessionDuration)
 	if err != nil {
-		return fmt.Errorf("STS GetSessionToken failed: %w", err)
+		return err
 	}
 
 	// Step 3: generate the short-lived Anthropic API key token

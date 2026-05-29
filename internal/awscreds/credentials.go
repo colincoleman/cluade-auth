@@ -3,6 +3,7 @@ package awscreds
 import (
 	"context"
 	"fmt"
+	"strings"
 	"time"
 
 	"github.com/aws/aws-sdk-go-v2/aws"
@@ -28,10 +29,12 @@ func (s *SessionCredentials) ToAWSCredentials() (aws.Credentials, error) {
 	}, nil
 }
 
-// GetSessionToken exchanges long-term IAM credentials for short-term STS
-// session credentials. These are used only to sign the presigned API-key
-// token — they are never written to disk.
-func GetSessionToken(ctx context.Context, accessKeyID, secretAccessKey, region string, durationHours int) (*SessionCredentials, error) {
+// AssumeRole exchanges long-term IAM credentials for short-term credentials by
+// assuming roleARN. The role must hold aws-external-anthropic:CreateInference.
+// If mfaSerial is set, tokenCode (a TOTP) is supplied for the MFA challenge.
+// The returned credentials are used only to sign the presigned API-key token —
+// they are never written to disk.
+func AssumeRole(ctx context.Context, accessKeyID, secretAccessKey, roleARN, mfaSerial, tokenCode, region string, durationHours int) (*SessionCredentials, error) {
 	staticCreds := credentials.NewStaticCredentialsProvider(accessKeyID, secretAccessKey, "")
 	cfg, err := config.LoadDefaultConfig(ctx,
 		config.WithCredentialsProvider(staticCreds),
@@ -42,12 +45,27 @@ func GetSessionToken(ctx context.Context, accessKeyID, secretAccessKey, region s
 	}
 
 	svc := sts.NewFromConfig(cfg)
-	duration := int32(durationHours * 3600)
-	resp, err := svc.GetSessionToken(ctx, &sts.GetSessionTokenInput{
-		DurationSeconds: aws.Int32(duration),
-	})
+
+	input := &sts.AssumeRoleInput{
+		RoleArn:         aws.String(roleARN),
+		RoleSessionName: aws.String("claude-auth"),
+		DurationSeconds: aws.Int32(int32(durationHours * 3600)),
+	}
+	if mfaSerial != "" {
+		input.SerialNumber = aws.String(mfaSerial)
+		input.TokenCode = aws.String(tokenCode)
+	}
+
+	resp, err := svc.AssumeRole(ctx, input)
 	if err != nil {
-		return nil, fmt.Errorf("STS GetSessionToken failed: %w", err)
+		// The role's MaxSessionDuration may be shorter than requested; retry at 1h.
+		if strings.Contains(err.Error(), "DurationSeconds") || strings.Contains(err.Error(), "MaxSessionDuration") {
+			input.DurationSeconds = aws.Int32(3600)
+			resp, err = svc.AssumeRole(ctx, input)
+		}
+		if err != nil {
+			return nil, fmt.Errorf("STS AssumeRole failed: %w", err)
+		}
 	}
 
 	return &SessionCredentials{

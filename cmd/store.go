@@ -43,7 +43,18 @@ func runStore(_ *cobra.Command, _ []string) error {
 		return err
 	}
 
-	return client.StoreCredentials(ctx, cfg.Vault, cfg.Item, accessKeyID, secretAccessKey)
+	if err := client.StoreCredentials(ctx, cfg.Vault, cfg.Item, accessKeyID, secretAccessKey); err != nil {
+		return err
+	}
+
+	if cfg.MFASerial != "" {
+		fmt.Println()
+		fmt.Printf("Reminder: the role %q requires MFA.\n", cfg.RoleARN)
+		fmt.Printf("In the 1Password app, add a one-time-password (TOTP) field to the\n")
+		fmt.Printf("%q item in vault %q using your MFA device's setup secret.\n", cfg.Item, cfg.Vault)
+		fmt.Println("claude-auth reads the live code from it during refresh.")
+	}
+	return nil
 }
 
 func promptSecret(label string) (string, error) {
