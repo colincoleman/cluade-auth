@@ -89,12 +89,15 @@ func Decode(token string) (*TokenInfo, error) {
 	info := &TokenInfo{}
 
 	// X-Amz-Credential = <access-key>/<date>/<region>/<service>/aws4_request
-	if cred := values.Get("X-Amz-Credential"); cred != "" {
-		parts := strings.Split(cred, "/")
-		if len(parts) >= 3 {
-			info.Region = parts[2]
-		}
+	cred := values.Get("X-Amz-Credential")
+	if cred == "" {
+		return nil, fmt.Errorf("region could not be extracted: X-Amz-Credential is missing")
 	}
+	parts := strings.Split(cred, "/")
+	if len(parts) < 3 {
+		return nil, fmt.Errorf("region could not be extracted: X-Amz-Credential has fewer than 3 segments")
+	}
+	info.Region = parts[2]
 
 	// Expiry = X-Amz-Date + X-Amz-Expires
 	if date := values.Get("X-Amz-Date"); date != "" {

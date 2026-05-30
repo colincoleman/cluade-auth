@@ -33,7 +33,7 @@ func runExec(_ *cobra.Command, args []string) error {
 		args = args[1:]
 	}
 	if len(args) == 0 {
-		return fmt.Errorf("no command specified — usage: claude-auth exec -- <command> [args...]")
+		args = []string{"claude"}
 	}
 
 	cfg, err := config.Load()
@@ -46,17 +46,7 @@ func runExec(_ *cobra.Command, args []string) error {
 		return fmt.Errorf("no Anthropic API key found — run 'claude-auth refresh' first")
 	}
 
-	// The short-term ANTHROPIC_AWS_API_KEY token is self-contained: Claude Code
-	// sends it as a bearer token and AWS credentials are not consulted at all.
-	// We deliberately do NOT set AWS_PROFILE or AWS_* credentials here.
-	inject := []string{
-		"CLAUDE_CODE_USE_ANTHROPIC_AWS=1",
-		"AWS_REGION=" + cfg.WorkspaceRegion,
-		"ANTHROPIC_AWS_WORKSPACE_ID=" + cfg.WorkspaceID,
-		"ANTHROPIC_AWS_API_KEY=" + apiKey,
-	}
-
-	env := append(os.Environ(), inject...)
+	env := buildExecEnv(cfg, apiKey)
 
 	// Resolve the command binary
 	command := args[0]
@@ -68,6 +58,20 @@ func runExec(_ *cobra.Command, args []string) error {
 	// syscall.Exec replaces the current process — no wrapper overhead,
 	// correct signal handling, and interactive TUIs work properly.
 	return syscall.Exec(path, args, env)
+}
+
+// buildExecEnv constructs the environment variable slice for the exec'd child
+// process. It inherits the current process environment and appends the
+// Anthropic AWS platform variables. It deliberately does NOT inject raw AWS
+// credentials (AWS_ACCESS_KEY_ID, AWS_SECRET_ACCESS_KEY, AWS_SESSION_TOKEN).
+func buildExecEnv(cfg *config.Config, apiKey string) []string {
+	inject := []string{
+		"CLAUDE_CODE_USE_ANTHROPIC_AWS=1",
+		"AWS_REGION=" + cfg.WorkspaceRegion,
+		"ANTHROPIC_AWS_WORKSPACE_ID=" + cfg.WorkspaceID,
+		"ANTHROPIC_AWS_API_KEY=" + apiKey,
+	}
+	return append(os.Environ(), inject...)
 }
 
 // readAnthropicAPIKey reads ANTHROPIC_AWS_API_KEY from anthropic.env if it exists.

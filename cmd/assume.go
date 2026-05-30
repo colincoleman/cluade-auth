@@ -3,11 +3,23 @@ package cmd
 import (
 	"context"
 	"fmt"
+	"regexp"
 
 	"github.com/ksgit/claude-auth/internal/awscreds"
 	"github.com/ksgit/claude-auth/internal/config"
 	"github.com/ksgit/claude-auth/internal/onepw"
 )
+
+// mfaCodeRegex matches exactly 6 ASCII decimal digits.
+var mfaCodeRegex = regexp.MustCompile(`^\d{6}$`)
+
+// validateMFACode checks that the given code is exactly 6 ASCII decimal digits.
+func validateMFACode(code string) error {
+	if !mfaCodeRegex.MatchString(code) {
+		return fmt.Errorf("MFA code must be exactly 6 digits")
+	}
+	return nil
+}
 
 // assumeConfiguredRole fetches the long-term IAM credentials (and MFA TOTP) from
 // 1Password and assumes the configured role, returning short-term credentials.
@@ -28,6 +40,9 @@ func assumeConfiguredRole(ctx context.Context, cfg *config.Config) (*awscreds.Se
 		tokenCode = prompt(fmt.Sprintf("MFA code for %s", cfg.MFASerial), "")
 		if tokenCode == "" {
 			return nil, fmt.Errorf("an MFA code is required to assume %s", cfg.RoleARN)
+		}
+		if err := validateMFACode(tokenCode); err != nil {
+			return nil, err
 		}
 	}
 
