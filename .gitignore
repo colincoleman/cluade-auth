@@ -1,0 +1,18 @@
+# Binary
+claude-auth
+
+# OS
+.DS_Store
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# Go
+/vendor/
+
+# Test artifacts
+*.test
+coverage.out
