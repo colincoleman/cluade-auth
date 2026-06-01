@@ -5,6 +5,7 @@ import (
 	"time"
 
 	"github.com/ksgit/claude-auth/internal/config"
+	"github.com/ksgit/claude-auth/internal/mfa"
 	"github.com/spf13/cobra"
 )
 
@@ -29,7 +30,45 @@ func runStatus(_ *cobra.Command, _ []string) error {
 
 	printExpiry("Anthropic token", state.AnthropicTokenExpiry)
 
+	printMFACooldownStatus(cfg, state)
+
 	return nil
+}
+
+// printMFACooldownStatus displays the MFA cooldown status based on config and state.
+func printMFACooldownStatus(cfg *config.Config, state *config.State) {
+	// Requirement 5.6: If MFA serial is empty, omit MFA cooldown info entirely
+	if cfg.MFASerial == "" {
+		return
+	}
+
+	fmt.Println()
+
+	// Requirement 5.4: If cooldown is 0, display disabled message
+	cooldownMinutes := cfg.GetMFACooldownMinutes()
+	if cooldownMinutes == 0 {
+		fmt.Println("  MFA rate-limiting is disabled")
+		return
+	}
+
+	// Requirement 5.3/5.5: If no timestamp or invalid timestamp
+	lastMFA := mfa.ParseMFATimestamp(state.LastMFASuccess)
+	if lastMFA.IsZero() {
+		fmt.Println("  MFA has not been used yet")
+		return
+	}
+
+	// Evaluate cooldown status
+	tracker := mfa.NewTracker()
+	skip, remaining := tracker.ShouldSkipMFA(lastMFA, cooldownMinutes)
+
+	if skip {
+		// Requirement 5.1: Within cooldown, display time remaining
+		fmt.Printf("  MFA cooldown          %s remaining\n", mfa.FormatRemaining(remaining))
+	} else {
+		// Requirement 5.2: Cooldown expired
+		fmt.Println("  Next refresh will require MFA")
+	}
 }
 
 // formatTimeRemaining returns the hours and minutes remaining until the given

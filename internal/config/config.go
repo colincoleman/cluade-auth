@@ -29,10 +29,24 @@ type Config struct {
 	WorkspaceRegion string `json:"workspace_region"`
 	WorkspaceID     string `json:"workspace_id"`
 	SessionDuration int    `json:"session_duration_hours"`
+	// MFACooldownMinutes is the minimum duration (in minutes) that must elapse
+	// after a successful MFA authentication before the system requires MFA again.
+	// Defaults to 60 when nil. A value of 0 disables rate-limiting.
+	MFACooldownMinutes *int `json:"mfa_cooldown_minutes,omitempty"`
+}
+
+// GetMFACooldownMinutes returns the configured MFA cooldown duration in minutes.
+// Returns 60 (the default) when the field is nil.
+func (c *Config) GetMFACooldownMinutes() int {
+	if c.MFACooldownMinutes == nil {
+		return 60
+	}
+	return *c.MFACooldownMinutes
 }
 
 type State struct {
 	AnthropicTokenExpiry string `json:"anthropic_token_expiry"`
+	LastMFASuccess       string `json:"last_mfa_success,omitempty"`
 }
 
 func DefaultConfig() Config {

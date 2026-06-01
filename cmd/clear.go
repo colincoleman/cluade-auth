@@ -35,9 +35,9 @@ func runClear(_ *cobra.Command, _ []string) error {
 	}
 
 	if removed == 0 {
-		fmt.Println("Nothing to clear — no stored token.")
+		fmt.Println("Nothing to clear — no stored token or MFA state.")
 	} else {
-		fmt.Println("Cleared the stored Anthropic token.")
+		fmt.Println("Cleared the stored Anthropic token and MFA state.")
 	}
 	fmt.Println("Plain `claude` uses your personal account; run `claude-auth refresh` for an AWS token again.")
 	return nil

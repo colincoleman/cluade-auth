@@ -126,3 +126,99 @@ func TestProperty5_StateSerializationRoundTrip(t *testing.T) {
 		}
 	})
 }
+
+// Feature: mfa-rate-limiting, Property 5: Config default value for missing cooldown field
+// **Validates: Requirements 3.1**
+//
+// For any valid config JSON that does not contain the `mfa_cooldown_minutes` field,
+// loading the config SHALL yield a cooldown value of 60 minutes via GetMFACooldownMinutes().
+func TestPropertyConfigDefaultCooldown(t *testing.T) {
+	t.Setenv("HOME", t.TempDir())
+
+	rapid.Check(t, func(rt *rapid.T) {
+		// Generate a random Config with non-empty required fields but NO MFACooldownMinutes
+		cfg := &Config{
+			OnePasswordAccount: rapid.StringMatching(`[a-zA-Z0-9@._]{1,50}`).Draw(rt, "onepassword_account"),
+			Vault:              rapid.StringMatching(`[a-zA-Z0-9 _-]{1,30}`).Draw(rt, "vault"),
+			Item:               rapid.StringMatching(`[a-zA-Z0-9 _-]{1,30}`).Draw(rt, "item"),
+			RoleARN:            rapid.StringMatching(`arn:aws:iam::[0-9]{12}:role/[a-zA-Z0-9_-]{1,30}`).Draw(rt, "role_arn"),
+			MFASerial:          rapid.OneOf(rapid.Just(""), rapid.StringMatching(`arn:aws:iam::[0-9]{12}:mfa/[a-zA-Z0-9._-]{1,30}`)).Draw(rt, "mfa_serial"),
+			WorkspaceRegion:    rapid.StringMatching(`[a-z]{2}-[a-z]+-[0-9]`).Draw(rt, "workspace_region"),
+			WorkspaceID:        rapid.StringMatching(`ws-[a-zA-Z0-9]{4,20}`).Draw(rt, "workspace_id"),
+			SessionDuration:    rapid.IntRange(1, 12).Draw(rt, "session_duration"),
+			MFACooldownMinutes: nil, // explicitly nil — field omitted from JSON
+		}
+
+		// Save the config (MFACooldownMinutes is nil so omitempty will exclude it)
+		if err := Save(cfg); err != nil {
+			rt.Fatalf("Save failed: %v", err)
+		}
+
+		// Verify the written JSON does not contain the mfa_cooldown_minutes key
+		path, err := Path()
+		if err != nil {
+			rt.Fatalf("Path failed: %v", err)
+		}
+		data, err := os.ReadFile(path)
+		if err != nil {
+			rt.Fatalf("ReadFile failed: %v", err)
+		}
+		for _, line := range splitLines(data) {
+			if containsKey(line, "mfa_cooldown_minutes") {
+				rt.Fatalf("config JSON unexpectedly contains mfa_cooldown_minutes: %s", string(data))
+			}
+		}
+
+		// Load the config back
+		loaded, err := Load()
+		if err != nil {
+			rt.Fatalf("Load failed: %v", err)
+		}
+
+		// The MFACooldownMinutes pointer should be nil after loading
+		if loaded.MFACooldownMinutes != nil {
+			rt.Errorf("MFACooldownMinutes should be nil when field is absent, got %d", *loaded.MFACooldownMinutes)
+		}
+
+		// GetMFACooldownMinutes() must return the default of 60
+		if got := loaded.GetMFACooldownMinutes(); got != 60 {
+			rt.Errorf("GetMFACooldownMinutes() = %d, want 60", got)
+		}
+	})
+}
+
+// splitLines splits byte data into lines for inspection.
+func splitLines(data []byte) []string {
+	var lines []string
+	start := 0
+	for i, b := range data {
+		if b == '\n' {
+			lines = append(lines, string(data[start:i]))
+			start = i + 1
+		}
+	}
+	if start < len(data) {
+		lines = append(lines, string(data[start:]))
+	}
+	return lines
+}
+
+// containsKey checks if a line contains a JSON key.
+func containsKey(line, key string) bool {
+	return len(line) > 0 && contains(line, `"`+key+`"`)
+}
+
+// contains is a simple substring check.
+func contains(s, substr string) bool {
+	return len(substr) <= len(s) && indexSubstring(s, substr) >= 0
+}
+
+// indexSubstring returns the index of substr in s, or -1 if not found.
+func indexSubstring(s, substr string) int {
+	for i := 0; i <= len(s)-len(substr); i++ {
+		if s[i:i+len(substr)] == substr {
+			return i
+		}
+	}
+	return -1
+}

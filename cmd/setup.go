@@ -9,6 +9,7 @@ import (
 	"sync"
 
 	"github.com/ksgit/claude-auth/internal/config"
+	"github.com/ksgit/claude-auth/internal/mfa"
 	"github.com/spf13/cobra"
 	"golang.org/x/term"
 )
@@ -39,6 +40,20 @@ func runSetup(_ *cobra.Command, _ []string) error {
 		return fmt.Errorf("role ARN is required")
 	}
 	cfg.MFASerial = prompt("MFA device ARN (blank if the role needs no MFA)", cfg.MFASerial)
+
+	if cfg.MFASerial != "" {
+		for {
+			input := prompt("MFA cooldown minutes (0 disables rate-limiting)", "60")
+			cooldown, err := mfa.ValidateCooldownMinutes(input)
+			if err != nil {
+				fmt.Printf("  Invalid: %s. Please enter a whole number (0 or greater).\n", err)
+				continue
+			}
+			cfg.MFACooldownMinutes = &cooldown
+			break
+		}
+	}
+
 	cfg.WorkspaceRegion = prompt("Workspace region (where the Claude workspace was provisioned)", cfg.WorkspaceRegion)
 	cfg.WorkspaceID = prompt("Anthropic workspace ID (Claude Platform on AWS → Workspaces)", "")
 	if cfg.WorkspaceID == "" {
